@@ -236,7 +236,7 @@ static class Program {
 		]
 	};
 
-	static readonly Dictionary<string, Dictionary<string, int>> EventCounts = new();
+	static readonly Dictionary<string, Dictionary<string, int>> EventCounts = [];
 
 	static string[] SkipStackFrames(string[] callStack) {
 		bool isKernel = callStack.Length != 0 && callStack[0].Contains("ntoskrnl!");
@@ -430,8 +430,8 @@ static class StackTraceService {
 		return [.. frames];
 	}
 
-	private static readonly HashSet<string> ResolvedModules = new HashSet<string>();
-	private static readonly SymbolReader SymbolReader = new SymbolReader(StreamWriter.Null, "SRV*C:\\Symbols\\") {
+	private static readonly HashSet<string> ResolvedModules = new();
+	private static readonly SymbolReader SymbolReader = new(StreamWriter.Null, "SRV*C:\\Symbols\\") {
 		Options = SymbolReaderOptions.CacheOnly | SymbolReaderOptions.NoNGenSymbolCreation,
 		SecurityCheck = _ => true,
 	};

@@ -16,6 +16,10 @@
 		<PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
 	</ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\perfview\src\FastSerialization\FastSerialization.csproj" />
+		<ProjectReference Include="..\perfview\src\TraceEvent\TraceEvent.csproj" />
+	</ItemGroup>
+	<ItemGroup>
 		<None Update="IgnoredClsids.txt">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
