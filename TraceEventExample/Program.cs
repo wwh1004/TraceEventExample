@@ -29,7 +29,7 @@ static class Program {
 			.MinimumLevel.Verbose()
 			.CreateLogger();
 
-		using var source = CreateDefenderSource();
+		using var source = CreateDefenderSource_Filtered();
 
 		try {
 			await ProcessSourceAsync(source, CancellationToken.None);
@@ -38,15 +38,39 @@ static class Program {
 		}
 	}
 
-	static TraceEventSessionSource CreateDefenderSource() {
+	static TraceEventSessionSource CreateDefenderSource_AllProviders() {
 		Debug.Assert(TraceEventProviders.GetEventSourceGuidFromName("Microsoft.Windows.TlgAggregateInternal") == Guid.Parse("{703fcc13-b66f-5868-ddd9-e2db7f381ffb}"));
 
 		var source = TraceEventSessionSource.Create("DefenderTrace", true);
 
+		source.AddDynamicCallback("Microsoft-Antimalware-AMFilter", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-Engine", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-Protection", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-RTP", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-Scan-Interface", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-Service", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-UacScan", LogEvent);
+		source.AddDynamicCallback("Microsoft-Windows-Windows Defender", LogEvent);
+
 		// {7af898d7-7e0e-518d-5f96-b1e79239484c} TraceLogging
-		source.AddDynamicCallback("Microsoft.Windows.Defender", (string eventName) => eventName is
-			not "Engine.GenericHResult" and
-			not "Engine.GenericCount", LogEvent);
+		source.AddDynamicCallback("Microsoft.Windows.Defender", LogEvent);
+
+		// ProcessStart/ProcessStop
+		source.AddDynamicCallback("Microsoft-Windows-Kernel-Process", (string eventName) => eventName.Split('/')[0] is
+			"ProcessStart" or
+			"ProcessStop", LogEvent);
+
+		// KERNEL_AUDIT_API_TERMINATEPROCESS
+		source.AddDynamicCallback("Microsoft-Windows-Kernel-Audit-API-Calls", (string eventName) => eventName is
+			"EventID(2)", LogEvent);
+
+		return source;
+	}
+
+	static TraceEventSessionSource CreateDefenderSource_Filtered() {
+		Debug.Assert(TraceEventProviders.GetEventSourceGuidFromName("Microsoft.Windows.TlgAggregateInternal") == Guid.Parse("{703fcc13-b66f-5868-ddd9-e2db7f381ffb}"));
+
+		var source = TraceEventSessionSource.Create("DefenderTrace", true);
 
 		source.AddDynamicCallback("Microsoft-Antimalware-AMFilter", (string eventName) => eventName is
 			not "AMFilter_CacheHit" and
@@ -72,16 +96,32 @@ static class Program {
 
 		source.AddDynamicCallback("Microsoft-Antimalware-Protection", LogEvent);
 
-		source.AddDynamicCallback("Microsoft-Antimalware-RTP", (string eventName) => eventName is not "RTPPriority", LogEvent);
+		source.AddDynamicCallback("Microsoft-Antimalware-RTP", (string eventName) => eventName is
+			not "RTPPriority", LogEvent);
+
+		source.AddDynamicCallback("Microsoft-Antimalware-Scan-Interface", LogEvent);
 
 		// Uselsess events
 		//source.AddDynamicCallback("Microsoft-Antimalware-Service", LogEvent);
 
+		source.AddDynamicCallback("Microsoft-Antimalware-UacScan", LogEvent);
+
+		source.AddDynamicCallback("Microsoft-Windows-Windows Defender", (string eventName) => eventName is
+			not "EventID(5007)", LogEvent);
+
+		// {7af898d7-7e0e-518d-5f96-b1e79239484c} TraceLogging
+		source.AddDynamicCallback("Microsoft.Windows.Defender", (string eventName) => eventName is
+			not "Engine.GenericHResult" and
+			not "Engine.GenericCount", LogEvent);
+
 		// ProcessStart/ProcessStop
-		source.AddDynamicCallback("Microsoft-Windows-Kernel-Process", (TraceEvent data) => (ushort)data.ID is 1 or 2, LogEvent);
+		source.AddDynamicCallback("Microsoft-Windows-Kernel-Process", (string eventName) => eventName.Split('/')[0] is
+			"ProcessStart" or
+			"ProcessStop", LogEvent);
 
 		// KERNEL_AUDIT_API_TERMINATEPROCESS
-		source.AddDynamicCallback("Microsoft-Windows-Kernel-Audit-API-Calls", (TraceEvent data) => (ushort)data.ID is 2, LogEvent);
+		source.AddDynamicCallback("Microsoft-Windows-Kernel-Audit-API-Calls", (string eventName) => eventName is
+			"EventID(2)", LogEvent);
 
 		return source;
 	}
